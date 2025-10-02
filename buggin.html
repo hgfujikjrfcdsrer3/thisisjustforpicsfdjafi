@@ -519,7 +519,13 @@
             }
 
         function populateStatusContent(tabData, state) {
-            statusContent.innerHTML = '<div class="status-selection-highlight" id="status-selection-highlight"></div>';
+            statusContent.innerHTML = '';
+            if (!document.getElementById('status-selection-highlight')) {
+                const highlightEl = document.createElement('div');
+                highlightEl.className = 'status-selection-highlight';
+                highlightEl.id = 'status-selection-highlight';
+                statusContent.appendChild(highlightEl);
+            }
             const statusHighlightEl = document.getElementById('status-selection-highlight');
             
             if (!tabData || !tabData.items || !Array.isArray(tabData.items)) return;
