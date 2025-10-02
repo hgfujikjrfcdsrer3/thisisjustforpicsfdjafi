@@ -198,9 +198,10 @@
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
             border: 1px solid var(--border-color);
             visibility: hidden;
-            overflow-y: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            display: flex;
+            flex-direction: column;
         }
 
         .status-panel::-webkit-scrollbar {
@@ -216,10 +217,15 @@
             text-align: center;
         }
 
-        .status-content {
-            padding: 15px;
-            position: relative;
-        }
+            .status-content {
+                padding: 15px;
+                position: relative;
+                overflow-y: auto;
+                flex: 1;         
+                min-height: 0;  
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
         
         .status-organizer-item {
             padding: 10px 15px 5px 15px;
