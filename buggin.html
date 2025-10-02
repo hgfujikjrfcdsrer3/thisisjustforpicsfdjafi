@@ -240,7 +240,6 @@
             z-index: 1;
             transition: top var(--transition-speed) ease-out;
             opacity: 0;
-            pointer-events: none;
         }
 
         .status-item-external {
@@ -382,8 +381,8 @@
 <div class="status-panel" id="status-panel">
     <div class="status-header" id="status-header">STATUS</div>
     <div class="status-content" id="status-content">
+        <div class="status-selection-highlight" id="status-selection-highlight"></div>
     </div>
-    <div class="status-selection-highlight" id="status-selection-highlight"></div>
 </div>
 
 <div class="jiggy-status-banner" id="jiggy-status-banner">
@@ -478,55 +477,51 @@
             document.onkeydown = keyHandler;
         }
 
-            function updateStatusSelection(items) {
-                const statusHighlight = document.getElementById('status-selection-highlight');
-                if (!statusHighlight) return;
+        function updateStatusSelection(items) {
+            if (!items || items.length === 0) return;
             
-                if (!items || items.length === 0) {
-                    statusHighlight.style.opacity = '0';
-                    return;
+            const itemElements = statusContent.querySelectorAll('.status-item-external, .status-item-input');
+            if (!itemElements[statusSelectedIndex]) return;
+
+            let itemTop = 0;
+            let itemHeight = 0;
+            
+            for (let i = 0; i < statusSelectedIndex; i++) {
+                if (itemElements[i]) {
+                    itemTop += itemElements[i].offsetHeight;
                 }
+            }
             
-                const itemElements = statusContent.querySelectorAll('.status-item-external, .status-item-input');
-                
-                if (!itemElements[statusSelectedIndex]) {
-                    statusHighlight.style.opacity = '0';
-                    return;
-                }
-            
-                let itemTop = 0;
-                for (let i = 0; i < statusSelectedIndex; i++) {
-                    if (itemElements[i]) {
-                        itemTop += itemElements[i].offsetHeight;
-                    }
-                }
-                const itemHeight = itemElements[statusSelectedIndex].offsetHeight;
-            
-                statusHighlight.style.top = `${itemTop}px`;
-                statusHighlight.style.height = `${itemHeight}px`;
-                statusHighlight.style.opacity = '1';
-            
-                const selectedItem = itemElements[statusSelectedIndex];
-                if (selectedItem) {
-                    selectedItem.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                    });
-                }
-            
-                itemElements.forEach((el, i) => {
-                    el.classList.toggle('selected', i === statusSelectedIndex);
-                });
+            if (itemElements[statusSelectedIndex]) {
+                itemHeight = itemElements[statusSelectedIndex].offsetHeight;
             }
 
-        function populateStatusContent(tabData, state) {
-            statusContent.innerHTML = '';
-            if (!document.getElementById('status-selection-highlight')) {
-                const highlightEl = document.createElement('div');
-                highlightEl.className = 'status-selection-highlight';
-                highlightEl.id = 'status-selection-highlight';
-                statusContent.appendChild(highlightEl);
+            statusHighlight.style.top = `${itemTop}px`;
+            statusHighlight.style.height = `${itemHeight}px`;
+            statusHighlight.style.opacity = '1';
+
+            const statusContentEl = statusContent.parentElement;
+            const scrollTop = statusContentEl.scrollTop;
+            const containerHeight = statusContentEl.clientHeight - statusHeader.offsetHeight;
+            const itemBottom = itemTop + itemHeight;
+            
+            const contentPadding = 15;
+            const adjustedItemTop = itemTop + statusHeader.offsetHeight + contentPadding;
+            const adjustedItemBottom = adjustedItemTop + itemHeight;
+            
+            if (adjustedItemTop < scrollTop + statusHeader.offsetHeight) {
+                statusContentEl.scrollTop = adjustedItemTop - statusHeader.offsetHeight;
+            } else if (adjustedItemBottom > scrollTop + statusContentEl.clientHeight) {
+                statusContentEl.scrollTop = adjustedItemBottom - statusContentEl.clientHeight;
             }
+
+            itemElements.forEach((el, i) => {
+                el.classList.toggle('selected', i === statusSelectedIndex);
+            });
+        }
+
+        function populateStatusContent(tabData, state) {
+            statusContent.innerHTML = '<div class="status-selection-highlight" id="status-selection-highlight"></div>';
             const statusHighlightEl = document.getElementById('status-selection-highlight');
             
             if (!tabData || !tabData.items || !Array.isArray(tabData.items)) return;
@@ -538,13 +533,16 @@
                 let contentHTML = '';
                 const safeLabel = safeEncode(item.label || 'Unknown');
 
+                // --- NEW ORGANIZER LOGIC ---
                 if (item.type === 'organizer') {
                     element.className = 'status-organizer-item'; 
                     element.innerHTML = `<span>${safeLabel}</span>`;
                     statusContent.appendChild(element);
-                    return;
+                    return; // Skip remaining logic for this non-selectable item
                 }
+                // --- END NEW ORGANIZER LOGIC ---
 
+                // Existing logic for selectable items
                 if (item.type === 'input') {
                     element.className = 'status-item-input';
                 } else {
