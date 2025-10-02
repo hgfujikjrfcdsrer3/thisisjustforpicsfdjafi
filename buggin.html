@@ -477,34 +477,21 @@
             document.onkeydown = keyHandler;
         }
 
-        function updateStatusSelection(items) {
-            if (!items || items.length === 0) return;
-            
-            const itemElements = statusContent.querySelectorAll('.status-item-external, .status-item-input');
-            if (!itemElements[statusSelectedIndex]) return;
-
-            let itemTop = 0;
-            let itemHeight = 0;
-            
-            for (let i = 0; i < statusSelectedIndex; i++) {
-                if (itemElements[i]) {
-                    itemTop += itemElements[i].offsetHeight;
-                }
-            }
-            
-            if (itemElements[statusSelectedIndex]) {
-                itemHeight = itemElements[statusSelectedIndex].offsetHeight;
-            }
-
-            statusHighlight.style.top = `${itemTop}px`;
-            statusHighlight.style.height = `${itemHeight}px`;
-            statusHighlight.style.opacity = '1';
-
             function updateStatusSelection(items) {
-                if (!items || items.length === 0) return;
+                const statusHighlight = document.getElementById('status-selection-highlight');
+                if (!statusHighlight) return;
+            
+                if (!items || items.length === 0) {
+                    statusHighlight.style.opacity = '0';
+                    return;
+                }
             
                 const itemElements = statusContent.querySelectorAll('.status-item-external, .status-item-input');
-                if (!itemElements[statusSelectedIndex]) return;
+                
+                if (!itemElements[statusSelectedIndex]) {
+                    statusHighlight.style.opacity = '0';
+                    return;
+                }
             
                 let itemTop = 0;
                 for (let i = 0; i < statusSelectedIndex; i++) {
@@ -518,16 +505,12 @@
                 statusHighlight.style.height = `${itemHeight}px`;
                 statusHighlight.style.opacity = '1';
             
-                const scrollingContainer = statusPanel;
                 const selectedItem = itemElements[statusSelectedIndex];
-            
-                const itemTopInContainer = selectedItem.offsetTop;
-                const itemBottomInContainer = itemTopInContainer + selectedItem.offsetHeight;
-            
-                if (itemTopInContainer < scrollingContainer.scrollTop) {
-                    scrollingContainer.scrollTop = itemTopInContainer;
-                } else if (itemBottomInContainer > (scrollingContainer.scrollTop + scrollingContainer.clientHeight)) {
-                    scrollingContainer.scrollTop = itemBottomInContainer - scrollingContainer.clientHeight;
+                if (selectedItem) {
+                    selectedItem.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest'
+                    });
                 }
             
                 itemElements.forEach((el, i) => {
