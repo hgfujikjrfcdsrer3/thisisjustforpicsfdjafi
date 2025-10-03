@@ -192,7 +192,7 @@
             right: 50px;
             top: 15vh;
             width: 350px;
-            height: 630px;
+            height: 550px;
             background: var(--bg-color);
             border-radius: var(--border-radius);
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
@@ -214,7 +214,6 @@
             font-size: 16px;
             font-weight: 600;
             text-align: center;
-            display: none;
         }
 
         .status-content {
@@ -477,47 +476,92 @@
             document.onkeydown = keyHandler;
         }
 
+        function getSelectableStatusItems(items) {
+            // Filter out 'organizer' items to get only the navigable list
+            return items.filter(item => item.type !== 'organizer');
+        }
+
         function updateStatusSelection(items) {
             if (!items || items.length === 0) return;
+             
+            // Get all visible HTML elements (excluding the highlight itself)
+            const allContentElements = Array.from(statusContent.children).filter(el => 
+                el !== statusHighlight && el.nodeType === 1
+            );
             
-            const itemElements = statusContent.querySelectorAll('.status-item-external, .status-item-input');
-            if (!itemElements[statusSelectedIndex]) return;
-
-            let itemTop = 0;
+            let itemTop = 0; // Pixel offset from the top of the status-content inner area (after its padding)
             let itemHeight = 0;
+            let selectedElement = null;
+
+            // Iterate through ALL elements to find the correct physical position (itemTop)
+            for (const el of allContentElements) {
+                const selectableIndexAttr = el.getAttribute('data-selectable-index');
+                
+                // If this is the currently selected, selectable element
+                if (selectableIndexAttr !== null && parseInt(selectableIndexAttr) === statusSelectedIndex) {
+                    selectedElement = el;
+                    itemHeight = el.offsetHeight;
+                    // itemTop is the total accumulated height of all elements *before* this one.
+                    break; 
+               }
+             }
             
-            for (let i = 0; i < statusSelectedIndex; i++) {
-                if (itemElements[i]) {
-                    itemTop += itemElements[i].offsetHeight;
-                }
-            }
-            
-            if (itemElements[statusSelectedIndex]) {
-                itemHeight = itemElements[statusSelectedIndex].offsetHeight;
+            if (!selectedElement) {
+                statusHighlight.style.opacity = '0';
+                return;
             }
 
+            // Set the highlight position based on accumulated height
             statusHighlight.style.top = `${itemTop}px`;
             statusHighlight.style.height = `${itemHeight}px`;
             statusHighlight.style.opacity = '1';
 
-            const statusContentEl = statusContent.parentElement;
-            const scrollTop = statusContentEl.scrollTop;
-            const containerHeight = statusContentEl.clientHeight - statusHeader.offsetHeight;
-            const itemBottom = itemTop + itemHeight;
+            const PADDING_TOP = 15;
+            const statusPanelEl = statusContent.parentElement;
+            const currentScrollTop = statusPanelEl.scrollTop;
+            const statusPanelHeight = statusPanelEl.clientHeight;
             
-            const contentPadding = 15;
-            const adjustedItemTop = itemTop + statusHeader.offsetHeight + contentPadding;
-            const adjustedItemBottom = adjustedItemTop + itemHeight;
+            const itemVisibleTop = PADDING_TOP + itemTop;
+            const itemVisibleBottom = itemVisibleTop + itemHeight;
             
-            if (adjustedItemTop < scrollTop + statusHeader.offsetHeight) {
-                statusContentEl.scrollTop = adjustedItemTop - statusHeader.offsetHeight;
-            } else if (adjustedItemBottom > scrollTop + statusContentEl.clientHeight) {
-                statusContentEl.scrollTop = adjustedItemBottom - statusContentEl.clientHeight;
+            const viewportTop = currentScrollTop;
+            const viewportBottom = currentScrollTop + statusPanelHeight - statusHeader.offsetHeight;
+            
+            if (itemVisibleBottom > viewportBottom) {
+                statusPanelEl.scrollTop = itemVisibleBottom - statusPanelHeight + statusHeader.offsetHeight;
+            } 
+            else if (itemVisibleTop < viewportTop) {
+                statusPanelEl.scrollTop = itemVisibleTop;
             }
 
-            itemElements.forEach((el, i) => {
-                el.classList.toggle('selected', i === statusSelectedIndex);
+            // Update selection class on selectable elements only
+            const selectableElements = statusContent.querySelectorAll('[data-selectable-index]');
+            selectableElements.forEach((el) => {
+                el.classList.toggle('selected', parseInt(el.getAttribute('data-selectable-index')) === statusSelectedIndex);
             });
+        }
+
+        function navigateStatus(direction) {
+            if (!currentState || !currentState.tabs[currentState.activeTab]) return;
+            const activeTabData = currentState.tabs[currentState.activeTab];
+            const selectableItems = getSelectableStatusItems(activeTabData.items);
+            
+            if (selectableItems.length === 0) return;
+
+            let newIndex = statusSelectedIndex;
+
+            if (direction === 'UP') {
+                newIndex = (statusSelectedIndex - 1 + selectableItems.length) % selectableItems.length;
+            } else if (direction === 'DOWN') {
+                newIndex = (statusSelectedIndex + 1) % selectableItems.length;
+            }
+            
+            statusSelectedIndex = newIndex;
+            updateStatusSelection(activeTabData.items);
+
+            if (window.parent) {
+                window.parent.postMessage({ action: 'select', itemIndex: statusSelectedIndex, isContentPanel: true }, '*');
+            }
         }
 
         function populateStatusContent(tabData, state) {
@@ -533,16 +577,13 @@
                 let contentHTML = '';
                 const safeLabel = safeEncode(item.label || 'Unknown');
 
-                // --- NEW ORGANIZER LOGIC ---
                 if (item.type === 'organizer') {
                     element.className = 'status-organizer-item'; 
                     element.innerHTML = `<span>${safeLabel}</span>`;
                     statusContent.appendChild(element);
-                    return; // Skip remaining logic for this non-selectable item
+                    return; // Organizers are NOT selectable, so skip the rest
                 }
-                // --- END NEW ORGANIZER LOGIC ---
 
-                // Existing logic for selectable items
                 if (item.type === 'input') {
                     element.className = 'status-item-input';
                 } else {
@@ -609,16 +650,20 @@
                 
                 element.innerHTML = contentHTML;
                 
-                // CORRECTED CLICK LISTENER: Uses the index in the selectableElements array
+                // Set the selectable index on the HTML element
                 const selectableIndex = selectableElements.length; 
+                element.setAttribute('data-selectable-index', selectableIndex);
 
                 element.addEventListener('click', () => {
                     statusSelectedIndex = selectableIndex; 
                     updateStatusSelection(tabData.items);
+                    if (window.parent) {
+                        window.parent.postMessage({ action: 'select', itemIndex: selectableIndex, isContentPanel: true }, '*');
+                    }
                 });
                 
                 statusContent.appendChild(element);
-                selectableElements.push(element); // Add to the selectable list
+                selectableElements.push(element);
             });
 
             if (state.selection && state.selection.index !== undefined) {
@@ -659,6 +704,9 @@
                 menuItemsEl.appendChild(menuItemEl);
 
                 menuItemEl.addEventListener('click', () => {
+                    if (window.parent) {
+                        window.parent.postMessage({ action: 'select', tabIndex: item.tabIndex, isContentPanel: false }, '*');
+                    }
                 });
             });
 
@@ -754,6 +802,68 @@
         }
 
         function handleMenuInput(e) {
+            // If the content panel is open (Status Panel)
+            if (currentState && currentState.isContentPanelOpen && currentState.tabs[currentState.activeTab]) {
+                e.preventDefault();
+                const activeTabData = currentState.tabs[currentState.activeTab];
+                const selectableItems = getSelectableStatusItems(activeTabData.items);
+
+                switch (e.key) {
+                    case 'ArrowUp':
+                        navigateStatus('UP');
+                        break;
+                    case 'ArrowDown':
+                        navigateStatus('DOWN');
+                        break;
+                    case 'Enter':
+                        // Post message for activation
+                        if (window.parent && selectableItems.length > 0) {
+                            window.parent.postMessage({ action: 'activate', itemIndex: statusSelectedIndex, isContentPanel: true }, '*');
+                        }
+                        break;
+                    case 'Backspace':
+                    case 'Escape':
+                        // Close content panel
+                        if (window.parent) {
+                            window.parent.postMessage({ action: 'closeContentPanel' }, '*');
+                        }
+                        break;
+                }
+                return;
+            }
+            
+            // Default menu navigation (main tabs) - only respond if content panel is NOT open
+            if (currentState && !currentState.isContentPanelOpen) {
+                e.preventDefault();
+                const menuItems = currentState.tabs;
+
+                switch (e.key) {
+                    case 'ArrowUp':
+                        selectedIndex = (selectedIndex - 1 + menuItems.length) % menuItems.length;
+                        break;
+                    case 'ArrowDown':
+                        selectedIndex = (selectedIndex + 1) % menuItems.length;
+                        break;
+                    case 'Enter':
+                        // Post message for tab selection/opening
+                        if (window.parent) {
+                            window.parent.postMessage({ action: 'select', tabIndex: selectedIndex, isContentPanel: false }, '*');
+                            window.parent.postMessage({ action: 'activate', tabIndex: selectedIndex, isContentPanel: false }, '*');
+                        }
+                        break;
+                    case 'Backspace':
+                    case 'Escape':
+                        // Hide main menu
+                        if (window.parent) {
+                            window.parent.postMessage({ action: 'hide' }, '*');
+                        }
+                        break;
+                }
+                updateMenuFromState(currentState); // Rerender to update selection highlight
+                return;
+            }
+            
+            // Fallback for default menu (not related to external state)
             if (currentState) return;
 
             e.preventDefault();
