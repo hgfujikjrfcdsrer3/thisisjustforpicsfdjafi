@@ -930,7 +930,31 @@
                         showNotification("Plug Menu loaded successfully");
                     }
                 }
+            } else if (action === 'hide') {
+                menuContainer.style.visibility = 'hidden';
+                statusPanel.style.visibility = 'hidden';
+            } else if (action === 'updateColors') {
+                if (data) {
+                    const root = document.documentElement;
+                    if (data.primary) {
+                        root.style.setProperty('--accent-color', data.primary);
+                    }
+                    if (data.border) {
+                        root.style.setProperty('--border-color', data.border);
+                    }
+                    if (data.background) {
+                        root.style.setProperty('--bg-gradient', data.background);
+                    }
+                }
+            } else if (action === 'updateBanner') {
+                if (data && data.url) {
+                    const headerImage = document.querySelector('.header-image');
+                    if (headerImage) {
+                        headerImage.style.backgroundImage = `url('${data.url}')`;
+                    }
+                }
             }
+        });
             
             if (action === 'hide') {
                 menuContainer.style.visibility = 'hidden';
