@@ -1,0 +1,133 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plug Menu Notification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-color: rgba(10, 10, 10, 0.92);
+            --primary-text: #0092ff;
+            --secondary-text: #b0b0b0;
+            --accent-color: #0092ff;
+            --highlight-bg: #8A2BE2;
+            --border-color: rgba(255, 255, 255, 0.15);
+            --font: 'Inter', sans-serif;
+            --border-radius: 8px;
+            --transition-speed: 0.1s;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font);
+            background-color: transparent;
+            color: var(--primary-text);
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+        }
+
+        .notification {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--primary-text);
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            border-left: 4px solid var(--accent-color);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            opacity: 0;
+            animation: slideIn 0.3s forwards, fadeOut 0.3s 2.7s forwards;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .notification-title {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            font-size: 14px;
+            color: var(--secondary-text);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="notification-container"></div>
+
+    <script>
+        function showNotification(title, message, duration = 3) {
+            const notificationContainer = document.getElementById('notification-container');
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            
+            const titleElement = document.createElement('div');
+            titleElement.className = 'notification-title';
+            titleElement.textContent = title;
+            
+            const messageElement = document.createElement('div');
+            messageElement.className = 'notification-message';
+            messageElement.textContent = message;
+            
+            notification.appendChild(titleElement);
+            notification.appendChild(messageElement);
+            
+            notificationContainer.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, duration * 1000);
+        }
+
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            
+            if (data.type === 'notification') {
+                showNotification(data.title, data.message, data.duration);
+            }
+        });
+    </script>
+</body>
+</html>
