@@ -948,7 +948,20 @@ if (action === 'updateBanner') {
                 menuContainer.style.top = `${data.y}px`;
                 menuContainer.style.position = 'fixed';
             }
-
+            
+            if (action === 'updateColors') {
+                const root = document.documentElement;
+                if (data.primary) {
+                    root.style.setProperty('--accent-color', data.primary);
+                }
+                if (data.border) {
+                    root.style.setProperty('--border-color', data.border);
+                }
+                if (data.background) {
+                    root.style.setProperty('--bg-gradient', data.background);
+                }
+            }
+            
             if (action === 'updateColors') {
                 const root = document.documentElement;
                 if (data.primary) {
