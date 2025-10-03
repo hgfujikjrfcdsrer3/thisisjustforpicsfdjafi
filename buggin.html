@@ -117,7 +117,7 @@
             z-index: 2;
         }
         
-        .item-label { flex-grow: 1; color: var(--accent-color); }
+        .item-label { flex-grow: 1; }
         .item-value { 
             color: var(--primary-text); 
             font-weight: 500;
@@ -949,18 +949,28 @@ if (action === 'updateBanner') {
                 menuContainer.style.position = 'fixed';
             }
             
-        if (action === 'updateColors') {
-            const root = document.documentElement;
-            if (data.primary) {
-                root.style.setProperty('--accent-color', data.primary);
+            if (action === 'updateColors') {
+                const root = document.documentElement;
+                if (data.primary) {
+                    root.style.setProperty('--accent-color', data.primary);
+                }
+                if (data.border) {
+                    root.style.setProperty('--border-color', data.border);
+                }
+                if (data.background) {
+                    root.style.setProperty('--bg-gradient', data.background);
+                }
             }
-            if (data.border) {
-                root.style.setProperty('--border-color', data.border);
-            }
-            if (data.background) {
-                root.style.setProperty('--bg-gradient', data.background);
-            }
-        }
+            
+            if (action === 'updateColors') {
+                const root = document.documentElement;
+                if (data.primary) {
+                    root.style.setProperty('--accent-color', data.primary);
+                }
+                if (data.border) {
+                    root.style.setProperty('--border-color', data.border);
+                }
+            }        });
         
         document.onkeydown = primaryKeyHandler;
         renderMenu('main');
